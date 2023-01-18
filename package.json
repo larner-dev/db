@@ -1,7 +1,7 @@
 {
   "name": "@larner.dev/db",
   "description": "A larner.dev project",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Aaron Larner",
   "type": "module",
   "scripts": {
