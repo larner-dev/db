@@ -4,7 +4,7 @@ import {
   JSONValue_T,
   ModelFetchOptions_T,
   ModelSaveOptions_T,
-  Transactable_T,
+  Transactable,
 } from "./types";
 
 type ModelField_T<T> = Extract<keyof T, string>;
@@ -107,10 +107,7 @@ export abstract class Model<T> {
     }
     return null;
   }
-  async saveAndFetch(
-    record: Partial<T>,
-    opts: Transactable_T = {}
-  ): Promise<T> {
+  async saveAndFetch(record: Partial<T>, opts: Transactable = {}): Promise<T> {
     const result = await this.save(record, {
       returnNew: true,
       query: opts.query,

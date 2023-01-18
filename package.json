@@ -35,7 +35,7 @@
     "knex": "2.4.0"
   },
   "dependencies": {
-    "@larner.dev/http-codes": "1.1.0",
+    "@larner.dev/http-codes": "1.4.2",
     "@types/jest": "29.2.5",
     "@types/node": "18.11.18",
     "@typescript-eslint/eslint-plugin": "5.48.1",
