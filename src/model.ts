@@ -37,10 +37,10 @@ export abstract class Model<T> {
   ): Promise<T | null> {
     const dbQuery = query || db.query.bind(db);
     const idField = this.getIdField();
-    const keys: ModelField_T<T>[] = (
-      Object.keys(record) as ModelField_T<T>[]
-    ).filter((k) => k !== idField);
-    if (!keys.length) {
+    const keys: ModelField_T<T>[] = Object.keys(record) as ModelField_T<T>[];
+    const keysWithoutId = keys.filter((k) => k !== idField);
+
+    if (!keysWithoutId.length) {
       throw new Error("Record has nothing to save.");
     }
 
@@ -49,23 +49,30 @@ export abstract class Model<T> {
     }
 
     let id = record[idField];
+    let recordExists = false;
 
     if (record[idField] !== undefined) {
+      recordExists = !!(await this.fetch({ [idField]: id } as Partial<T>));
+    }
+
+    if (recordExists) {
       const updateField = this.getUpdatedField();
       if (updateField && !record[updateField]) {
         (record[updateField] as unknown as string) = new Date().toISOString();
-        keys.push(updateField);
+        keysWithoutId.push(updateField);
       }
 
       const params: any[] = [this.table];
-      for (const key of keys) {
+      for (const key of keysWithoutId) {
         params.push(key);
         params.push(record[key]);
       }
       params.push(idField);
       params.push(record[idField]);
       await dbQuery(
-        `update ?? set ${keys.map(() => "?? = ?").join(", ")} where ?? = ?`,
+        `update ?? set ${keysWithoutId
+          .map(() => "?? = ?")
+          .join(", ")} where ?? = ?`,
         params
       );
     } else {
@@ -74,7 +81,6 @@ export abstract class Model<T> {
         (record[createdField] as unknown as string) = new Date().toISOString();
         keys.push(createdField);
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const values: any[] = keys.map((k) => {
         const val = record[k];
         if (["boolean", "number", "string"].includes(typeof val)) {
@@ -115,7 +121,6 @@ export abstract class Model<T> {
     return result;
   }
   async fetch(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     record: Partial<T>,
     opts: ModelFetchOptions_T = {}
   ): Promise<T | null> {
@@ -170,5 +175,19 @@ export abstract class Model<T> {
       throw new HTTPError.NotFound("RECORD_NOT_FOUND", params);
     }
     return result;
+  }
+  async hardDelete(record: Partial<T>, opts: ModelFetchOptions_T = {}) {
+    const found = await this.fetch(record, opts);
+    const idField = this.getIdField();
+    if (found && idField) {
+      const { query } = opts;
+      const dbQuery = query || db.query.bind(db);
+
+      await dbQuery(`delete from ?? where ?? = ?`, [
+        this.table,
+        idField,
+        found[idField] as JSONValue_T,
+      ]);
+    }
   }
 }
