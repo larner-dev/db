@@ -1,6 +1,7 @@
 import { HTTPError } from "@larner.dev/http-codes";
 import { db } from "./db";
 import {
+  JSONObject_T,
   JSONValue_T,
   ModelFetchOptions_T,
   ModelSaveOptions_T,
@@ -16,6 +17,7 @@ interface ModelParams_T<T> {
   getCreatedField: ModelFieldGetter_T<T>;
   getUpdatedField: ModelFieldGetter_T<T>;
   getDeletedField: ModelFieldGetter_T<T>;
+  parse?: (model: JSONObject_T) => T;
 }
 
 export abstract class Model<T> {
@@ -24,12 +26,14 @@ export abstract class Model<T> {
   public readonly getCreatedField: ModelFieldGetter_T<T>;
   public readonly getUpdatedField: ModelFieldGetter_T<T>;
   public readonly getDeletedField: ModelFieldGetter_T<T>;
+  public readonly parse?: (model: JSONObject_T) => T;
   constructor(params: ModelParams_T<T>) {
     this.table = params.table;
     this.getIdField = params.getIdField;
     this.getCreatedField = params.getCreatedField;
     this.getUpdatedField = params.getUpdatedField;
     this.getDeletedField = params.getDeletedField;
+    this.parse = params.parse;
   }
   async save(
     record: Partial<T>,
@@ -159,7 +163,12 @@ export abstract class Model<T> {
       params
     );
 
-    return results.rows[0] || null;
+    let result: T | null = results.rows[0] || null;
+    if (result && this.parse) {
+      result = this.parse(result);
+    }
+
+    return result;
   }
   async fetchOrThrow(
     record: Partial<T>,
