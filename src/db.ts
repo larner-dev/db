@@ -1,7 +1,7 @@
 import { Knex } from "knex";
 import { DbTransactionCallback_T, QueryParams_T, QueryResult_T } from "./types";
 
-class Db {
+export class Db {
   public client: Knex | null;
   constructor() {
     this.client = null;
@@ -49,7 +49,5 @@ class Db {
     });
   }
 }
-
-export type Db_T = Db;
 
 export const db = new Db();

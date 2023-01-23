@@ -1,5 +1,5 @@
 import { HTTPError } from "@larner.dev/http-codes";
-import { db } from "./db";
+import { db, Db } from "./db";
 import {
   JSONObject_T,
   JSONValue_T,
@@ -8,40 +8,43 @@ import {
   Transactable,
 } from "./types";
 
-type ModelField_T<T> = Extract<keyof T, string>;
-type ModelFieldGetter_T<T> = () => ModelField_T<T> | null;
-
-interface ModelParams_T<T> {
+export interface ModelParams<T> {
   table: string;
-  getIdField: ModelFieldGetter_T<T>;
-  getCreatedField: ModelFieldGetter_T<T>;
-  getUpdatedField: ModelFieldGetter_T<T>;
-  getDeletedField: ModelFieldGetter_T<T>;
+  getIdField: ModelFieldGetter<T>;
+  getCreatedField: ModelFieldGetter<T>;
+  getUpdatedField: ModelFieldGetter<T>;
+  getDeletedField: ModelFieldGetter<T>;
   parse?: (model: JSONObject_T) => T;
+  db?: Db;
 }
+
+type ModelField<T> = Extract<keyof T, string>;
+type ModelFieldGetter<T> = () => ModelField<T> | null;
 
 export abstract class Model<T> {
   public readonly table: string;
-  public readonly getIdField: ModelFieldGetter_T<T>;
-  public readonly getCreatedField: ModelFieldGetter_T<T>;
-  public readonly getUpdatedField: ModelFieldGetter_T<T>;
-  public readonly getDeletedField: ModelFieldGetter_T<T>;
+  public readonly getIdField: ModelFieldGetter<T>;
+  public readonly getCreatedField: ModelFieldGetter<T>;
+  public readonly getUpdatedField: ModelFieldGetter<T>;
+  public readonly getDeletedField: ModelFieldGetter<T>;
   public readonly parse?: (model: JSONObject_T) => T;
-  constructor(params: ModelParams_T<T>) {
+  public readonly db;
+  constructor(params: ModelParams<T>) {
     this.table = params.table;
     this.getIdField = params.getIdField;
     this.getCreatedField = params.getCreatedField;
     this.getUpdatedField = params.getUpdatedField;
     this.getDeletedField = params.getDeletedField;
     this.parse = params.parse;
+    this.db = params.db || db;
   }
   async save(
     record: Partial<T>,
     { returnNew, query }: ModelSaveOptions_T = {}
   ): Promise<T | null> {
-    const dbQuery = query || db.query.bind(db);
+    const dbQuery = query || this.db.query.bind(this.db);
     const idField = this.getIdField();
-    const keys: ModelField_T<T>[] = Object.keys(record) as ModelField_T<T>[];
+    const keys: ModelField<T>[] = Object.keys(record) as ModelField<T>[];
     const keysWithoutId = keys.filter((k) => k !== idField);
 
     if (!keysWithoutId.length) {
@@ -126,8 +129,8 @@ export abstract class Model<T> {
     opts: ModelFetchOptions_T = {}
   ): Promise<T | null> {
     const { query } = opts;
-    const dbQuery = query || db.query.bind(db);
-    const keys: ModelField_T<T>[] = Object.keys(record) as ModelField_T<T>[];
+    const dbQuery = query || this.db.query.bind(this.db);
+    const keys: ModelField<T>[] = Object.keys(record) as ModelField<T>[];
     if (!keys.length) {
       throw new Error("No filters supplied to fetch.");
     }
@@ -182,12 +185,12 @@ export abstract class Model<T> {
     }
     return result;
   }
-  async hardDelete(record: Partial<T>, opts: ModelFetchOptions_T = {}) {
+  async hardDelete(record: Partial<T>, opts: Transactable = {}) {
     const found = await this.fetch(record, opts);
     const idField = this.getIdField();
     if (found && idField) {
       const { query } = opts;
-      const dbQuery = query || db.query.bind(db);
+      const dbQuery = query || this.db.query.bind(this.db);
 
       await dbQuery(`delete from ?? where ?? = ?`, [
         this.table,

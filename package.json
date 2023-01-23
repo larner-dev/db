@@ -9,7 +9,7 @@
     "build-cjs": "esbuild src/index.ts --bundle --platform=node --target=node16 --outdir=build/cjs  --packages=external --format=cjs",
     "build-esm": "esbuild src/index.ts --bundle --platform=node --target=node16 --outdir=build/esm  --packages=external --format=esm",
     "build-types": "tsc --project tsconfig.json --declaration --emitDeclarationOnly --outdir build/types",
-    "dev": "npm run build-esm -- --watch",
+    "dev": "concurrently 'npm run build-esm -- --watch' 'npm run build-types -- --watch'",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint .",
     "postversion": "git push && git push --tags",
@@ -26,6 +26,7 @@
   "types": "./build/types/index.d.ts",
   "main": "./build/esm/index.js",
   "devDependencies": {
+    "concurrently": "7.6.0",
     "esbuild": "0.16.16",
     "esbuild-jest": "0.5.0",
     "eslint": "8.31.0",
