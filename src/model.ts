@@ -95,15 +95,6 @@ export abstract class Model<T> {
         .concat(keys)
         .concat(values)
         .concat(idField);
-      console.log(
-        `
-      insert into ?? (${keys.map(() => "??").join(", ")})
-      values (${keys.map(() => "?").join(", ")})
-      returning ??
-    `,
-        params,
-        record
-      );
       const result = await dbQuery(
         `
 					insert into ?? (${keys.map(() => "??").join(", ")})
