@@ -749,6 +749,16 @@
     "@typescript-eslint/eslint-plugin" "5.48.1"
     "@typescript-eslint/parser" "5.48.1"
 
+"@larner.dev/json-type@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@larner.dev/json-type/-/json-type-1.0.0.tgz#83664be2ab72ec9ea8a86916f670f9c83cb6cd6f"
+  integrity sha512-0eEXRt+sgHkwCUizcjnyvTytIX0xwzvvLpOviDRspbSNCRpQGz7iFt5PYjBmcBMUJpRDRRGM71F1gQd+gONhHA==
+  dependencies:
+    "@types/jest" "29.2.5"
+    "@types/node" "18.11.18"
+    "@typescript-eslint/eslint-plugin" "5.48.1"
+    "@typescript-eslint/parser" "5.48.1"
+
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
   resolved "https://registry.npmjs.org/@nodelib/fs.scandir/-/fs.scandir-2.1.5.tgz"

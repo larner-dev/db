@@ -1,12 +1,7 @@
 import { HTTPError } from "@larner.dev/http-codes";
+import { JSONObject, JSONValue } from "@larner.dev/json-type";
 import { db, Db } from "./db";
-import {
-  JSONObject_T,
-  JSONValue_T,
-  ModelFetchOptions_T,
-  ModelSaveOptions_T,
-  Transactable,
-} from "./types";
+import { ModelFetchOptions_T, ModelSaveOptions_T, Transactable } from "./types";
 
 export interface ModelParams<T> {
   table: string;
@@ -14,12 +9,19 @@ export interface ModelParams<T> {
   getCreatedField: ModelFieldGetter<T>;
   getUpdatedField: ModelFieldGetter<T>;
   getDeletedField: ModelFieldGetter<T>;
-  parse?: (model: JSONObject_T) => T;
+  parse?: (model: JSONObject) => T;
   db?: Db;
 }
 
 type ModelField<T> = Extract<keyof T, string>;
 type ModelFieldGetter<T> = () => ModelField<T> | null;
+
+const formatSqlValue = (val: unknown): JSONValue => {
+  if (["boolean", "number", "string"].includes(typeof val) || val === null) {
+    return val as JSONValue;
+  }
+  return JSON.stringify(val);
+};
 
 export abstract class Model<T> {
   public readonly table: string;
@@ -27,7 +29,7 @@ export abstract class Model<T> {
   public readonly getCreatedField: ModelFieldGetter<T>;
   public readonly getUpdatedField: ModelFieldGetter<T>;
   public readonly getDeletedField: ModelFieldGetter<T>;
-  public readonly parse?: (model: JSONObject_T) => T;
+  public readonly parse?: (model: JSONObject) => T;
   public readonly db;
   constructor(params: ModelParams<T>) {
     this.table = params.table;
@@ -72,7 +74,7 @@ export abstract class Model<T> {
       const params: any[] = [this.table];
       for (const key of keysWithoutId) {
         params.push(key);
-        params.push(record[key]);
+        params.push(formatSqlValue(record[key]));
       }
       params.push(idField);
       params.push(record[idField]);
@@ -88,17 +90,20 @@ export abstract class Model<T> {
         (record[createdField] as unknown as string) = new Date().toISOString();
         keys.push(createdField);
       }
-      const values: any[] = keys.map((k) => {
-        const val = record[k];
-        if (["boolean", "number", "string"].includes(typeof val)) {
-          return val;
-        }
-        return JSON.stringify(val);
-      });
-      const params: JSONValue_T[] = [this.table as JSONValue_T]
+      const values: JSONValue[] = keys.map((k) => formatSqlValue(record[k]));
+      const params: JSONValue[] = [this.table as JSONValue]
         .concat(keys)
         .concat(values)
         .concat(idField);
+      console.log(
+        `
+      insert into ?? (${keys.map(() => "??").join(", ")})
+      values (${keys.map(() => "?").join(", ")})
+      returning ??
+    `,
+        params,
+        record
+      );
       const result = await dbQuery(
         `
 					insert into ?? (${keys.map(() => "??").join(", ")})
@@ -134,14 +139,14 @@ export abstract class Model<T> {
     if (!keys.length) {
       throw new Error("No filters supplied to fetch.");
     }
-    let params: JSONValue_T[] = [this.table as JSONValue_T];
+    let params: JSONValue[] = [this.table as JSONValue];
     for (const key of keys) {
       params.push(key);
       if (record[key] !== null) {
         if (Array.isArray(record[key])) {
-          params = [...params, ...(record[key] as unknown as JSONValue_T[])];
+          params = [...params, ...(record[key] as unknown as JSONValue[])];
         } else {
-          params.push(record[key] as unknown as JSONValue_T);
+          params.push(record[key] as unknown as JSONValue);
         }
       }
     }
@@ -154,7 +159,7 @@ export abstract class Model<T> {
             return "?? IS NULL";
           }
           if (Array.isArray(record[k])) {
-            return `?? IN (${(record[k] as unknown as JSONValue_T[])
+            return `?? IN (${(record[k] as unknown as JSONValue[])
               .map(() => "?")
               .join(",")})`;
           }
@@ -195,7 +200,7 @@ export abstract class Model<T> {
       await dbQuery(`delete from ?? where ?? = ?`, [
         this.table,
         idField,
-        found[idField] as JSONValue_T,
+        found[idField] as JSONValue,
       ]);
     }
   }

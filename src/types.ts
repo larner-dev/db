@@ -1,9 +1,5 @@
 import { Knex } from "knex";
-
-export type JSONPrimitive_T = string | number | boolean | null;
-export type JSONValue_T = JSONPrimitive_T | JSONObject_T | JSONArray_T;
-export type JSONObject_T = { [member: string]: JSONValue_T };
-export type JSONArray_T = Array<JSONValue_T>;
+import { JSONObject } from "@larner.dev/json-type";
 
 export type QueryParams_T = Knex.RawBinding[] | Knex.ValueDict;
 
@@ -52,5 +48,5 @@ export interface Model_T {
   save: (
     record: ModelRecord_T,
     opts: ModelSaveOptions_T
-  ) => Promise<JSONObject_T | void>;
+  ) => Promise<JSONObject | void>;
 }
